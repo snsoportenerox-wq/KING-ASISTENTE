@@ -5,7 +5,6 @@ const {
   GatewayIntentBits,
   Partials,
   EmbedBuilder,
-  PermissionsBitField,
   ChannelType,
   SlashCommandBuilder,
   REST,
@@ -47,7 +46,7 @@ const CONFIG = {
     leave: '1538681130293923893',
     invites: '1538681130776010754',
     staffGuide: '1538681129333170278',
-    staffRules: '1538681139333170283',
+    staffRules: '1538681129333170283',
     appeals: '1538681130776010761',
     serverInfo: '1538681130293923890'
   },
@@ -57,17 +56,16 @@ const CONFIG = {
 
 // ═══════════════════════════════════════════════
 // 💾 DATOS TEMPORALES
-// Sin base de datos
 // ═══════════════════════════════════════════════
 
 const afkUsers = new Map();
 const inviteUses = new Map();
 
 // ═══════════════════════════════════════════════
-// 🎨 FUNCIONES
+// 🎨 EMBEDS
 // ═══════════════════════════════════════════════
 
-function embed(title, description = '') {
+function createEmbed(title, description = '') {
   return new EmbedBuilder()
     .setColor(0xD4AF37)
     .setTitle(title)
@@ -75,22 +73,18 @@ function embed(title, description = '') {
     .setTimestamp();
 }
 
-function getChannel(id) {
-  return client.channels.cache.get(id);
-}
-
-async function sendChannel(id, message) {
-  const channel = getChannel(id);
+async function sendToChannel(channelId, message) {
+  const channel = client.channels.cache.get(channelId);
 
   if (!channel) {
-    console.log(`⚠️ Canal no encontrado: ${id}`);
+    console.log(`⚠️ Canal no encontrado: ${channelId}`);
     return null;
   }
 
   try {
     return await channel.send(message);
   } catch (error) {
-    console.error(`❌ Error enviando mensaje al canal ${id}:`, error);
+    console.error(`❌ Error enviando mensaje:`, error);
     return null;
   }
 }
@@ -101,8 +95,7 @@ async function sendChannel(id, message) {
 
 const commands = [
 
-  // ───────── FUN ─────────
-
+  // FUN
   new SlashCommandBuilder()
     .setName('8ball')
     .setDescription('Haz una pregunta a la bola mágica')
@@ -138,7 +131,7 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName('choose')
-    .setDescription('Elige entre varias opciones')
+    .setDescription('Elige una opción')
     .addStringOption(option =>
       option
         .setName('opciones')
@@ -159,7 +152,7 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName('wyr')
-    .setDescription('Pregunta ¿Qué prefieres?'),
+    .setDescription('Pregunta qué prefieres'),
 
   new SlashCommandBuilder()
     .setName('joke')
@@ -171,13 +164,12 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName('fortune')
-    .setDescription('Recibe una predicción divertida'),
+    .setDescription('Recibe una fortuna'),
 
-  // ───────── INFORMACIÓN ─────────
-
+  // INFORMACIÓN
   new SlashCommandBuilder()
     .setName('help')
-    .setDescription('Muestra los comandos disponibles'),
+    .setDescription('Muestra los comandos'),
 
   new SlashCommandBuilder()
     .setName('serverinfo')
@@ -215,7 +207,7 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName('avatar')
-    .setDescription('Muestra el avatar de un usuario')
+    .setDescription('Muestra un avatar')
     .addUserOption(option =>
       option
         .setName('usuario')
@@ -225,7 +217,7 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName('membercount')
-    .setDescription('Muestra el número de miembros'),
+    .setDescription('Muestra la cantidad de miembros'),
 
   new SlashCommandBuilder()
     .setName('boosters')
@@ -237,7 +229,7 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName('rules')
-    .setDescription('Información sobre las reglas'),
+    .setDescription('Información de las reglas'),
 
   new SlashCommandBuilder()
     .setName('links')
@@ -263,10 +255,9 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName('roles')
-    .setDescription('Muestra los roles del servidor'),
+    .setDescription('Muestra los roles'),
 
-  // ───────── UTILIDAD ─────────
-
+  // UTILIDAD
   new SlashCommandBuilder()
     .setName('afk')
     .setDescription('Activa tu estado AFK')
@@ -279,15 +270,15 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName('ping')
-    .setDescription('Muestra el ping del bot'),
+    .setDescription('Muestra el ping'),
 
   new SlashCommandBuilder()
     .setName('uptime')
-    .setDescription('Muestra cuánto lleva encendido el bot'),
+    .setDescription('Muestra el tiempo encendido'),
 
   new SlashCommandBuilder()
     .setName('botinfo')
-    .setDescription('Información de King's Assistant'),
+    .setDescription("Información de King's Assistant"),
 
   new SlashCommandBuilder()
     .setName('status')
@@ -295,11 +286,11 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName('stats')
-    .setDescription('Muestra estadísticas del bot'),
+    .setDescription('Muestra estadísticas'),
 
   new SlashCommandBuilder()
     .setName('changelog')
-    .setDescription('Muestra las últimas actualizaciones'),
+    .setDescription('Muestra las actualizaciones'),
 
   new SlashCommandBuilder()
     .setName('calculate')
@@ -313,7 +304,7 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName('timestamp')
-    .setDescription('Genera un timestamp de Discord')
+    .setDescription('Genera un timestamp')
     .addIntegerOption(option =>
       option
         .setName('timestamp')
@@ -337,7 +328,9 @@ async function registerCommands() {
         process.env.CLIENT_ID,
         process.env.GUILD_ID
       ),
-      { body: commands }
+      {
+        body: commands
+      }
     );
 
     console.log(`✅ ${commands.length} comandos registrados.`);
@@ -352,7 +345,9 @@ async function registerCommands() {
 
 client.on('guildMemberAdd', async member => {
 
-  const welcomeEmbed = embed(
+  console.log(`🛎️ Entró: ${member.user.tag}`);
+
+  const welcomeEmbed = createEmbed(
     '♛ KING THE LAND ♛',
     [
       '🛎️・**CHECK-IN**',
@@ -362,29 +357,31 @@ client.on('guildMemberAdd', async member => {
       '🏨 Tu estancia comienza ahora.',
       '',
       '🛎️ **Recepción**',
-      'Aquí podrás conocer nuestra comunidad.',
+      'Conoce nuestra comunidad y sus espacios.',
       '',
       '🛏️ **Habitaciones**',
-      'Explora los diferentes espacios del servidor.',
+      'Explora los diferentes canales.',
       '',
       '🎉 **Eventos**',
       'Participa en nuestras actividades.',
       '',
       '💎 **VIP**',
-      'Descubre los beneficios y experiencias disponibles.',
+      'Descubre las experiencias disponibles.',
       '',
       '🤝 **Amistades**',
-      'Conoce nuevos miembros y forma parte de la comunidad.',
+      'Conoce nuevos miembros.',
       '',
       '♛ Esperamos que disfrutes tu estancia. ♛'
     ].join('\n')
   );
 
   welcomeEmbed.setThumbnail(
-    member.user.displayAvatarURL({ dynamic: true })
+    member.user.displayAvatarURL({
+      dynamic: true
+    })
   );
 
-  await sendChannel(CONFIG.channels.welcome, {
+  await sendToChannel(CONFIG.channels.welcome, {
     content: `${member}`,
     embeds: [welcomeEmbed],
     allowedMentions: {
@@ -404,7 +401,9 @@ client.on('guildMemberAdd', async member => {
 
 client.on('guildMemberRemove', async member => {
 
-  const leaveEmbed = embed(
+  console.log(`🚪 Salió: ${member.user.tag}`);
+
+  const leaveEmbed = createEmbed(
     '♛ KING THE LAND ♛',
     [
       '🚪・**CHECK-OUT**',
@@ -423,7 +422,7 @@ client.on('guildMemberRemove', async member => {
     ].join('\n')
   );
 
-  await sendChannel(CONFIG.channels.leave, {
+  await sendToChannel(CONFIG.channels.leave, {
     content: `${member.user}`,
     embeds: [leaveEmbed],
     allowedMentions: {
@@ -438,15 +437,82 @@ client.on('guildMemberRemove', async member => {
 });
 
 // ═══════════════════════════════════════════════
+// 🎟️ INVITACIONES
+// ═══════════════════════════════════════════════
+
+client.on('guildMemberAdd', async member => {
+
+  try {
+
+    const invites = await member.guild.invites.fetch();
+
+    let usedInvite = null;
+
+    for (const invite of invites.values()) {
+
+      const previousUses =
+        inviteUses.get(invite.code) || 0;
+
+      if ((invite.uses || 0) > previousUses) {
+        usedInvite = invite;
+        break;
+      }
+    }
+
+    for (const invite of invites.values()) {
+      inviteUses.set(
+        invite.code,
+        invite.uses || 0
+      );
+    }
+
+    if (!usedInvite) return;
+
+    const inviter = usedInvite.inviter;
+
+    const inviteEmbed = createEmbed(
+      '🎟️ Nueva invitación',
+      [
+        `👤 **Nuevo miembro:** ${member}`,
+        `🎟️ **Invitado por:** ${inviter || 'Desconocido'}`,
+        '',
+        '✨ ¡Gracias por ayudar a crecer a King the Land!'
+      ].join('\n')
+    );
+
+    await sendToChannel(
+      CONFIG.channels.invites,
+      {
+        embeds: [inviteEmbed]
+      }
+    );
+
+  } catch (error) {
+    console.log(
+      '⚠️ No se pudo detectar la invitación.'
+    );
+  }
+});
+
+// ═══════════════════════════════════════════════
 // 💤 AFK
 // ═══════════════════════════════════════════════
 
 async function activateAFK(interaction) {
 
   const member = interaction.member;
+
   const reason =
     interaction.options.getString('motivo') ||
     'Sin motivo especificado';
+
+  if (afkUsers.has(member.id)) {
+
+    return interaction.reply({
+      content: '💤 Ya tienes el estado AFK activado.',
+      ephemeral: true
+    });
+  }
 
   const oldNickname = member.nickname;
 
@@ -456,19 +522,23 @@ async function activateAFK(interaction) {
     oldNickname
   });
 
-  let newNickname = `[AFK] ${member.displayName}`;
+  let newNickname =
+    `[AFK] ${member.displayName}`;
 
   if (newNickname.length > 32) {
-    newNickname = `[AFK] ${member.user.username}`;
+    newNickname =
+      `[AFK] ${member.user.username}`;
   }
 
   try {
     await member.setNickname(newNickname);
-  } catch (error) {
-    console.log('⚠️ No se pudo cambiar el nickname.');
+  } catch {
+    console.log(
+      '⚠️ No se pudo cambiar el nickname.'
+    );
   }
 
-  const afkEmbed = embed(
+  const afkEmbed = createEmbed(
     '💤 Estado AFK',
     `Has activado tu estado AFK.\n\n**Motivo:** ${reason}`
   );
@@ -488,9 +558,13 @@ async function removeAFK(member) {
   afkUsers.delete(member.id);
 
   try {
-    await member.setNickname(data.oldNickname);
-  } catch (error) {
-    console.log('⚠️ No se pudo restaurar el nickname.');
+    await member.setNickname(
+      data.oldNickname
+    );
+  } catch {
+    console.log(
+      '⚠️ No se pudo restaurar el nickname.'
+    );
   }
 }
 
@@ -502,33 +576,33 @@ client.on('messageCreate', async message => {
 
   if (message.author.bot) return;
 
-  // Quitar AFK al hablar
+  // Usuario AFK vuelve a hablar
   if (afkUsers.has(message.author.id)) {
 
-    const member = message.member;
+    await removeAFK(message.member);
 
-    await removeAFK(member);
-
-    const msg = await message.channel.send(
-      `🛎️ Bienvenido/a de vuelta, ${message.author}. Tu estado AFK ha sido retirado.`
-    );
+    const response =
+      await message.channel.send(
+        `🛎️ Bienvenido/a de vuelta, ${message.author}. Tu estado AFK ha sido retirado.`
+      );
 
     setTimeout(() => {
-      msg.delete().catch(() => {});
+      response.delete().catch(() => {});
     }, 5000);
   }
 
-  // Detectar menciones de usuarios AFK
+  // Mención de usuario AFK
   for (const user of message.mentions.users.values()) {
 
     const data = afkUsers.get(user.id);
 
     if (!data) continue;
 
-    const elapsed = Date.now() - data.since;
-    const minutes = Math.floor(elapsed / 60000);
+    const minutes = Math.floor(
+      (Date.now() - data.since) / 60000
+    );
 
-    const afkEmbed = embed(
+    const afkEmbed = createEmbed(
       '💤 Usuario AFK',
       [
         `**Usuario:** ${user}`,
@@ -547,83 +621,43 @@ client.on('messageCreate', async message => {
 });
 
 // ═══════════════════════════════════════════════
-// 🎟️ INVITACIONES
-// ═══════════════════════════════════════════════
-
-client.on('guildMemberAdd', async member => {
-
-  try {
-    const invites = await member.guild.invites.fetch();
-
-    let usedInvite = null;
-
-    for (const invite of invites.values()) {
-
-      const previousUses =
-        inviteUses.get(invite.code) || 0;
-
-      if (invite.uses > previousUses) {
-        usedInvite = invite;
-        break;
-      }
-    }
-
-    for (const invite of invites.values()) {
-      inviteUses.set(invite.code, invite.uses || 0);
-    }
-
-    if (!usedInvite) return;
-
-    const inviter = usedInvite.inviter;
-
-    const inviteEmbed = embed(
-      '🎟️ Nueva invitación',
-      [
-        `👤 **Nuevo miembro:** ${member}`,
-        `🎟️ **Invitado por:** ${inviter || 'Desconocido'}`,
-        '',
-        '✨ ¡Gracias por ayudar a crecer a King the Land!'
-      ].join('\n')
-    );
-
-    await sendChannel(CONFIG.channels.invites, {
-      embeds: [inviteEmbed]
-    });
-
-  } catch (error) {
-    console.log('⚠️ No se pudo identificar la invitación utilizada.');
-  }
-});
-
-// ═══════════════════════════════════════════════
 // 🏨 SERVERINFO
 // ═══════════════════════════════════════════════
 
-function serverInfoEmbed(guild) {
+function buildServerInfo(guild) {
 
-  const textChannels = guild.channels.cache.filter(
-    c => c.type === ChannelType.GuildText
-  ).size;
+  const textChannels =
+    guild.channels.cache.filter(
+      channel =>
+        channel.type === ChannelType.GuildText
+    ).size;
 
-  const voiceChannels = guild.channels.cache.filter(
-    c => c.type === ChannelType.GuildVoice
-  ).size;
+  const voiceChannels =
+    guild.channels.cache.filter(
+      channel =>
+        channel.type === ChannelType.GuildVoice
+    ).size;
 
-  const categories = guild.channels.cache.filter(
-    c => c.type === ChannelType.GuildCategory
-  ).size;
+  const categories =
+    guild.channels.cache.filter(
+      channel =>
+        channel.type === ChannelType.GuildCategory
+    ).size;
 
-  const bots = guild.members.cache.filter(
-    member => member.user.bot
-  ).size;
+  const bots =
+    guild.members.cache.filter(
+      member => member.user.bot
+    ).size;
 
-  const users = guild.memberCount - bots;
+  const users =
+    Math.max(0, guild.memberCount - bots);
 
-  const boosters = guild.members.cache.filter(
-    member => member.premiumSince
-  ).size;
+  const boosters =
+    guild.members.cache.filter(
+      member => member.premiumSince
+    ).size;
 
-  return embed(
+  return createEmbed(
     `🏨 ${guild.name}`,
     [
       '## 📋 Información general',
@@ -640,8 +674,8 @@ function serverInfoEmbed(guild) {
       '',
       '## 🏨 Servidor',
       `**Canales totales:** ${guild.channels.cache.size}`,
-      `**Canales de texto:** ${textChannels}`,
-      `**Canales de voz:** ${voiceChannels}`,
+      `**Texto:** ${textChannels}`,
+      `**Voz:** ${voiceChannels}`,
       `**Categorías:** ${categories}`,
       `**Roles:** ${guild.roles.cache.size}`,
       `**Emojis:** ${guild.emojis.cache.size}`,
@@ -661,781 +695,42 @@ function serverInfoEmbed(guild) {
 }
 
 // ═══════════════════════════════════════════════
-// 📝 INTERACCIONES
-// ═══════════════════════════════════════════════
-
-client.on('interactionCreate', async interaction => {
-
-  if (!interaction.isChatInputCommand()) return;
-
-  const { commandName } = interaction;
-
-  try {
-
-    // ───────── AFK ─────────
-
-    if (commandName === 'afk') {
-      return activateAFK(interaction);
-    }
-
-    // ───────── PING ─────────
-
-    if (commandName === 'ping') {
-
-      const ping = client.ws.ping;
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            '🏓 Pong',
-            `Latencia: **${ping}ms**`
-          )
-        ]
-      });
-    }
-
-    // ───────── UPTIME ─────────
-
-    if (commandName === 'uptime') {
-
-      const seconds = Math.floor(process.uptime());
-
-      const days = Math.floor(seconds / 86400);
-      const hours = Math.floor((seconds % 86400) / 3600);
-      const minutes = Math.floor((seconds % 3600) / 60);
-      const secs = seconds % 60;
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            '⏱️ Uptime',
-            `**${days}d ${hours}h ${minutes}m ${secs}s**`
-          )
-        ]
-      });
-    }
-
-    // ───────── BOTINFO ─────────
-
-    if (commandName === 'botinfo') {
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            '♛ KING\'S ASSISTANT ♛',
-            [
-              '**Bot privado de King the Land**',
-              '',
-              `🤖 **Usuario:** ${client.user}`,
-              `🏨 **Servidores:** ${client.guilds.cache.size}`,
-              `📡 **Ping:** ${client.ws.ping}ms`,
-              `⚙️ **Discord.js:** ${require('discord.js').version}`,
-              `🟢 **Node.js:** ${process.version}`
-            ].join('\n')
-          )
-        ]
-      });
-    }
-
-    // ───────── STATUS ─────────
-
-    if (commandName === 'status') {
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            '🟢 Estado',
-            [
-              '**King\'s Assistant está operativo.**',
-              '',
-              '📡 Discord: Conectado',
-              '🏨 Servidor: Conectado',
-              `📶 Ping: ${client.ws.ping}ms`
-            ].join('\n')
-          )
-        ]
-      });
-    }
-
-    // ───────── STATS ─────────
-
-    if (commandName === 'stats') {
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            '📊 Estadísticas',
-            [
-              `👥 Usuarios: ${client.guilds.cache.reduce((a, g) => a + g.memberCount, 0)}`,
-              `🏨 Servidores: ${client.guilds.cache.size}`,
-              `⚙️ Comandos: ${commands.length}`,
-              `💤 AFK activos: ${afkUsers.size}`
-            ].join('\n')
-          )
-        ]
-      });
-    }
-
-    // ───────── SERVERINFO ─────────
-
-    if (commandName === 'serverinfo') {
-
-      return interaction.reply({
-        embeds: [
-          serverInfoEmbed(interaction.guild)
-        ]
-      });
-    }
-
-    // ───────── MEMBERCOUNT ─────────
-
-    if (commandName === 'membercount') {
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            '👥 Miembros',
-            `King the Land tiene actualmente **${interaction.guild.memberCount} miembros**.`
-          )
-        ]
-      });
-    }
-
-    // ───────── BOOSTERS ─────────
-
-    if (commandName === 'boosters') {
-
-      const boosters = interaction.guild.members.cache
-        .filter(member => member.premiumSince)
-        .map(member => member.user)
-        .slice(0, 30);
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            '💎 Boosters',
-            boosters.length
-              ? boosters.map(user => `💎 ${user}`).join('\n')
-              : 'Actualmente no hay boosters visibles.'
-          )
-        ]
-      });
-    }
-
-    // ───────── USERINFO ─────────
-
-    if (commandName === 'userinfo') {
-
-      const user =
-        interaction.options.getUser('usuario') ||
-        interaction.user;
-
-      const member =
-        interaction.guild.members.cache.get(user.id);
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            `👤 ${user.username}`,
-            [
-              `**ID:** ${user.id}`,
-              `**Cuenta creada:** <t:${Math.floor(user.createdTimestamp / 1000)}:F>`,
-              member
-                ? `**Entró al servidor:** <t:${Math.floor(member.joinedTimestamp / 1000)}:F>`
-                : '',
-              member
-                ? `**Roles:** ${member.roles.cache.size - 1}`
-                : ''
-            ].filter(Boolean).join('\n')
-          ).setThumbnail(
-            user.displayAvatarURL({ dynamic: true })
-          )
-        ]
-      });
-    }
-
-    // ───────── AVATAR ─────────
-
-    if (commandName === 'avatar') {
-
-      const user =
-        interaction.options.getUser('usuario') ||
-        interaction.user;
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            `🖼️ Avatar de ${user.username}`,
-            `[Abrir avatar](${user.displayAvatarURL({
-              size: 1024,
-              extension: 'png'
-            })})`
-          ).setImage(
-            user.displayAvatarURL({
-              size: 1024,
-              extension: 'png'
-            })
-          )
-        ]
-      });
-    }
-
-    // ───────── ROLEINFO ─────────
-
-    if (commandName === 'roleinfo') {
-
-      const role = interaction.options.getRole('rol');
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            `🎭 ${role.name}`,
-            [
-              `**ID:** ${role.id}`,
-              `**Miembros:** ${role.members.size}`,
-              `**Posición:** ${role.position}`,
-              `**Mencionable:** ${role.mentionable ? 'Sí' : 'No'}`
-            ].join('\n')
-          )
-        ]
-      });
-    }
-
-    // ───────── CHANNELINFO ─────────
-
-    if (commandName === 'channelinfo') {
-
-      const channel =
-        interaction.options.getChannel('canal') ||
-        interaction.channel;
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            `📁 ${channel.name}`,
-            [
-              `**ID:** ${channel.id}`,
-              `**Tipo:** ${channel.type}`,
-              `**Creado:** <t:${Math.floor(channel.createdTimestamp / 1000)}:F>`
-            ].join('\n')
-          )
-        ]
-      });
-    }
-
-    // ───────── SERVERICON ─────────
-
-    if (commandName === 'servericon') {
-
-      const icon = interaction.guild.iconURL({
-        size: 1024,
-        extension: 'png'
-      });
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            '🏨 Icono del servidor',
-            icon ? `[Abrir icono](${icon})` : 'El servidor no tiene icono.'
-          ).setImage(icon)
-        ]
-      });
-    }
-
-    // ───────── SERVERBANNER ─────────
-
-    if (commandName === 'serverbanner') {
-
-      const banner = interaction.guild.bannerURL({
-        size: 2048,
-        extension: 'png'
-      });
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            '🖼️ Banner del servidor',
-            banner
-              ? `[Abrir banner](${banner})`
-              : 'El servidor no tiene un banner disponible.'
-          ).setImage(banner)
-        ]
-      });
-    }
-
-    // ───────── JOINED ─────────
-
-    if (commandName === 'joined') {
-
-      const user =
-        interaction.options.getUser('usuario') ||
-        interaction.user;
-
-      const member =
-        await interaction.guild.members.fetch(user.id);
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            '📅 Entrada al servidor',
-            `${user} entró el <t:${Math.floor(member.joinedTimestamp / 1000)}:F>`
-          )
-        ]
-      });
-    }
-
-    // ───────── ROLES ─────────
-
-    if (commandName === 'roles') {
-
-      const roles = interaction.guild.roles.cache
-        .filter(role => role.id !== interaction.guild.id)
-        .sort((a, b) => b.position - a.position)
-        .map(role => role.toString())
-        .slice(0, 50);
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            '🎭 Roles',
-            roles.length
-              ? roles.join('\n')
-              : 'No hay roles.'
-          )
-        ]
-      });
-    }
-
-    // ───────── HELP ─────────
-
-    if (commandName === 'help') {
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            '♛ KING\'S ASSISTANT — AYUDA',
-            [
-              '### 🎉 Diversión',
-              '`/8ball` `/coinflip` `/dice` `/rps` `/choose`',
-              '`/random` `/wyr` `/joke` `/compliment` `/fortune`',
-              '',
-              '### ℹ️ Información',
-              '`/serverinfo` `/userinfo` `/roleinfo` `/channelinfo`',
-              '`/avatar` `/membercount` `/boosters` `/staff` `/rules`',
-              '`/links` `/servericon` `/serverbanner` `/joined` `/roles`',
-              '',
-              '### 🛠️ Utilidad',
-              '`/afk` `/ping` `/uptime` `/botinfo` `/status`',
-              '`/stats` `/changelog` `/calculate` `/timestamp`'
-            ].join('\n')
-          )
-        ]
-      });
-    }
-
-    // ───────── 8BALL ─────────
-
-    if (commandName === '8ball') {
-
-      const answers = [
-        '✨ Definitivamente.',
-        '🏨 Es muy probable.',
-        '👑 Sí.',
-        '🤔 Puede ser.',
-        '🎭 No estoy seguro.',
-        '❌ Probablemente no.',
-        '🚪 No.',
-        '🛎️ Pregunta nuevamente más tarde.'
-      ];
-
-      const question =
-        interaction.options.getString('pregunta');
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            '🎱 8Ball',
-            `**Pregunta:** ${question}\n\n**Respuesta:** ${answers[Math.floor(Math.random() * answers.length)]}`
-          )
-        ]
-      });
-    }
-
-    // ───────── COINFLIP ─────────
-
-    if (commandName === 'coinflip') {
-
-      const result =
-        Math.random() < 0.5
-          ? '🪙 Cara'
-          : '🪙 Cruz';
-
-      return interaction.reply({
-        embeds: [
-          embed('🪙 Moneda', `Resultado: **${result}**`)
-        ]
-      });
-    }
-
-    // ───────── DICE ─────────
-
-    if (commandName === 'dice') {
-
-      const result =
-        Math.floor(Math.random() * 6) + 1;
-
-      return interaction.reply({
-        embeds: [
-          embed('🎲 Dado', `Resultado: **${result}**`)
-        ]
-      });
-    }
-
-    // ───────── CHOOSE ─────────
-
-    if (commandName === 'choose') {
-
-      const options =
-        interaction.options
-          .getString('opciones')
-          .split(',')
-          .map(x => x.trim())
-          .filter(Boolean);
-
-      const selected =
-        options[Math.floor(Math.random() * options.length)];
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            '🎯 Elección',
-            `Opciones: ${options.join(', ')}\n\n👑 Elegí: **${selected}**`
-          )
-        ]
-      });
-    }
-
-    // ───────── RANDOM ─────────
-
-    if (commandName === 'random') {
-
-      const max =
-        interaction.options.getInteger('maximo');
-
-      const result =
-        Math.floor(Math.random() * max) + 1;
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            '🎲 Número aleatorio',
-            `Resultado: **${result}**`
-          )
-        ]
-      });
-    }
-
-    // ───────── RPS ─────────
-
-    if (commandName === 'rps') {
-
-      const userChoice =
-        interaction.options.getString('eleccion');
-
-      const choices = ['piedra', 'papel', 'tijera'];
-
-      const botChoice =
-        choices[Math.floor(Math.random() * choices.length)];
-
-      let result;
-
-      if (userChoice === botChoice) {
-        result = '🤝 Empate.';
-      } else if (
-        (userChoice === 'piedra' && botChoice === 'tijera') ||
-        (userChoice === 'papel' && botChoice === 'piedra') ||
-        (userChoice === 'tijera' && botChoice === 'papel')
-      ) {
-        result = '👑 Ganaste.';
-      } else {
-        result = '🎭 Perdí yo...';
-      }
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            '✊ Piedra, Papel o Tijera',
-            [
-              `Tu elección: **${userChoice}**`,
-              `Mi elección: **${botChoice}**`,
-              '',
-              result
-            ].join('\n')
-          )
-        ]
-      });
-    }
-
-    // ───────── WYR ─────────
-
-    if (commandName === 'wyr') {
-
-      const questions = [
-        '¿Qué prefieres: viajar al pasado o al futuro?',
-        '¿Qué prefieres: tener suerte o tener talento?',
-        '¿Qué prefieres: ser famoso o tener mucho dinero?',
-        '¿Qué prefieres: vivir en la ciudad o en el campo?'
-      ];
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            '🤔 ¿Qué prefieres?',
-            questions[Math.floor(Math.random() * questions.length)]
-          )
-        ]
-      });
-    }
-
-    // ───────── JOKE ─────────
-
-    if (commandName === 'joke') {
-
-      const jokes = [
-        '😂 ¿Qué hace una abeja en el gimnasio? ¡Zum-ba!',
-        '😂 ¿Qué le dijo un techo a otro? Techo de menos.',
-        '😂 ¿Cuál es el colmo de un jardinero? Que siempre lo dejen plantado.'
-      ];
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            '😂 Chiste',
-            jokes[Math.floor(Math.random() * jokes.length)]
-          )
-        ]
-      });
-    }
-
-    // ───────── COMPLIMENT ─────────
-
-    if (commandName === 'compliment') {
-
-      const compliments = [
-        '✨ Tienes una energía increíble.',
-        '👑 Eres una gran persona.',
-        '🏨 Tu presencia mejora la comunidad.',
-        '💎 Eres alguien especial.'
-      ];
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            '💎 Cumplido',
-            compliments[Math.floor(Math.random() * compliments.length)]
-          )
-        ]
-      });
-    }
-
-    // ───────── FORTUNE ─────────
-
-    if (commandName === 'fortune') {
-
-      const fortunes = [
-        '✨ Algo interesante podría ocurrir pronto.',
-        '👑 Un buen momento puede estar cerca.',
-        '🏨 Hoy podría ser un día diferente.',
-        '💎 Mantente atento a nuevas oportunidades.'
-      ];
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            '🔮 Fortuna',
-            fortunes[Math.floor(Math.random() * fortunes.length)]
-          )
-        ]
-      });
-    }
-
-    // ───────── CALCULATE ─────────
-
-    if (commandName === 'calculate') {
-
-      const operation =
-        interaction.options.getString('operacion');
-
-      if (!/^[0-9+\-*/().%\s]+$/.test(operation)) {
-        return interaction.reply({
-          content: '❌ Operación no válida.',
-          ephemeral: true
-        });
-      }
-
-      try {
-
-        const result =
-          Function(`"use strict"; return (${operation})`)();
-
-        return interaction.reply({
-          embeds: [
-            embed(
-              '🧮 Calculadora',
-              `\`${operation}\` = **${result}**`
-            )
-          ]
-        });
-
-      } catch {
-        return interaction.reply({
-          content: '❌ No pude calcular esa operación.',
-          ephemeral: true
-        });
-      }
-    }
-
-    // ───────── TIMESTAMP ─────────
-
-    if (commandName === 'timestamp') {
-
-      const timestamp =
-        interaction.options.getInteger('timestamp');
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            '⏰ Timestamp',
-            [
-              `Unix: \`${timestamp}\``,
-              '',
-              `<t:${timestamp}:F>`,
-              `<t:${timestamp}:R>`
-            ].join('\n')
-          )
-        ]
-      });
-    }
-
-    // ───────── RULES ─────────
-
-    if (commandName === 'rules') {
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            '📜 Reglas',
-            `Consulta las reglas completas en <#${CONFIG.channels.rules}>.`
-          )
-        ]
-      });
-    }
-
-    // ───────── LINKS ─────────
-
-    if (commandName === 'links') {
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            '🔗 Enlaces importantes',
-            [
-              `📜 Reglas: <#${CONFIG.channels.rules}>`,
-              `🏨 Información: <#${CONFIG.channels.serverInfo}>`,
-              `⚖️ Apelaciones: <#${CONFIG.channels.appeals}>`,
-              '',
-              `⚖️ Servidor de apelaciones: ${CONFIG.appealServer}`
-            ].join('\n')
-          )
-        ]
-      });
-    }
-
-    // ───────── STAFF ─────────
-
-    if (commandName === 'staff') {
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            '🛡️ Staff',
-            `Consulta la guía del Staff en <#${CONFIG.channels.staffGuide}>.`
-          )
-        ]
-      });
-    }
-
-    // ───────── CHANGELOG ─────────
-
-    if (commandName === 'changelog') {
-
-      return interaction.reply({
-        embeds: [
-          embed(
-            '📋 Changelog',
-            [
-              '### v1.0',
-              '✅ Sistema base de King\'s Assistant',
-              '✅ Welcome',
-              '✅ Leave',
-              '✅ AFK',
-              '✅ Información del servidor',
-              '✅ Comandos de diversión',
-              '✅ Comandos de información',
-              '✅ Comandos de utilidad'
-            ].join('\n')
-          )
-        ]
-      });
-    }
-
-  } catch (error) {
-
-    console.error('❌ Error ejecutando comando:', error);
-
-    if (interaction.replied || interaction.deferred) {
-      await interaction.followUp({
-        content: '❌ Ocurrió un error ejecutando este comando.',
-        ephemeral: true
-      }).catch(() => {});
-    } else {
-      await interaction.reply({
-        content: '❌ Ocurrió un error ejecutando este comando.',
-        ephemeral: true
-      }).catch(() => {});
-    }
-  }
-});
-
-// ═══════════════════════════════════════════════
 // 📋 LOGS
 // ═══════════════════════════════════════════════
 
 async function getOrCreateLogsChannel(guild) {
 
-  let channel = guild.channels.cache.find(
-    c =>
-      c.name === '📋・logs' &&
-      c.type === ChannelType.GuildText
-  );
+  let channel =
+    guild.channels.cache.find(
+      c =>
+        c.name === '📋・logs' &&
+        c.type === ChannelType.GuildText
+    );
 
   if (channel) return channel;
 
   try {
 
-    channel = await guild.channels.create({
-      name: '📋・logs',
-      type: ChannelType.GuildText,
-      reason: 'Canal de logs de King\'s Assistant'
-    });
+    channel =
+      await guild.channels.create({
+        name: '📋・logs',
+        type: ChannelType.GuildText,
+        reason:
+          "Canal de logs de King's Assistant"
+      });
 
-    console.log(`✅ Canal de logs creado: ${channel.id}`);
+    console.log(
+      `✅ Canal de logs creado: ${channel.id}`
+    );
 
     return channel;
 
   } catch (error) {
 
-    console.error('❌ No se pudo crear el canal de logs.');
+    console.error(
+      '❌ No se pudo crear el canal de logs.',
+      error
+    );
 
     return null;
   }
@@ -1453,10 +748,8 @@ async function logAction(title, description) {
 
   if (!channel) return;
 
-  const logEmbed = embed(
-    title,
-    description
-  );
+  const logEmbed =
+    createEmbed(title, description);
 
   await channel.send({
     embeds: [logEmbed]
@@ -1464,19 +757,834 @@ async function logAction(title, description) {
 }
 
 // ═══════════════════════════════════════════════
-// 🚀 BOT READY
+// 🧩 INTERACCIONES
+// ═══════════════════════════════════════════════
+
+client.on('interactionCreate', async interaction => {
+
+  if (!interaction.isChatInputCommand()) return;
+
+  try {
+
+    // AFK
+    if (interaction.commandName === 'afk') {
+      return activateAFK(interaction);
+    }
+
+    // PING
+    if (interaction.commandName === 'ping') {
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            '🏓 Pong',
+            `Latencia: **${client.ws.ping}ms**`
+          )
+        ]
+      });
+    }
+
+    // UPTIME
+    if (interaction.commandName === 'uptime') {
+
+      const totalSeconds =
+        Math.floor(process.uptime());
+
+      const days =
+        Math.floor(totalSeconds / 86400);
+
+      const hours =
+        Math.floor((totalSeconds % 86400) / 3600);
+
+      const minutes =
+        Math.floor((totalSeconds % 3600) / 60);
+
+      const seconds =
+        totalSeconds % 60;
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            '⏱️ Uptime',
+            `**${days}d ${hours}h ${minutes}m ${seconds}s**`
+          )
+        ]
+      });
+    }
+
+    // BOTINFO
+    if (interaction.commandName === 'botinfo') {
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            "♛ KING'S ASSISTANT ♛",
+            [
+              '**Bot privado de King the Land**',
+              '',
+              `🤖 **Usuario:** ${client.user}`,
+              `🏨 **Servidores:** ${client.guilds.cache.size}`,
+              `📡 **Ping:** ${client.ws.ping}ms`,
+              `⚙️ **Discord.js:** ${require('discord.js').version}`,
+              `🟢 **Node.js:** ${process.version}`
+            ].join('\n')
+          )
+        ]
+      });
+    }
+
+    // STATUS
+    if (interaction.commandName === 'status') {
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            '🟢 Estado',
+            [
+              '**King\'s Assistant está operativo.**',
+              '',
+              '📡 Discord: Conectado',
+              '🏨 Servidor: Conectado',
+              `📶 Ping: ${client.ws.ping}ms`
+            ].join('\n')
+          )
+        ]
+      });
+    }
+
+    // STATS
+    if (interaction.commandName === 'stats') {
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            '📊 Estadísticas',
+            [
+              `👥 Miembros: ${client.guilds.cache.reduce(
+                (total, guild) =>
+                  total + guild.memberCount,
+                0
+              )}`,
+              `🏨 Servidores: ${client.guilds.cache.size}`,
+              `⚙️ Comandos: ${commands.length}`,
+              `💤 AFK activos: ${afkUsers.size}`
+            ].join('\n')
+          )
+        ]
+      });
+    }
+
+    // SERVERINFO
+    if (interaction.commandName === 'serverinfo') {
+
+      return interaction.reply({
+        embeds: [
+          buildServerInfo(interaction.guild)
+        ]
+      });
+    }
+
+    // MEMBERCOUNT
+    if (interaction.commandName === 'membercount') {
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            '👥 Miembros',
+            `King the Land tiene **${interaction.guild.memberCount} miembros**.`
+          )
+        ]
+      });
+    }
+
+    // BOOSTERS
+    if (interaction.commandName === 'boosters') {
+
+      const boosters =
+        interaction.guild.members.cache
+          .filter(member => member.premiumSince)
+          .map(member => member.user)
+          .slice(0, 30);
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            '💎 Boosters',
+            boosters.length
+              ? boosters.map(user => `💎 ${user}`).join('\n')
+              : 'Actualmente no hay boosters visibles.'
+          )
+        ]
+      });
+    }
+
+    // USERINFO
+    if (interaction.commandName === 'userinfo') {
+
+      const user =
+        interaction.options.getUser('usuario') ||
+        interaction.user;
+
+      const member =
+        interaction.guild.members.cache.get(user.id);
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            `👤 ${user.username}`,
+            [
+              `**ID:** ${user.id}`,
+              `**Cuenta creada:** <t:${Math.floor(user.createdTimestamp / 1000)}:F>`,
+              member
+                ? `**Entró:** <t:${Math.floor(member.joinedTimestamp / 1000)}:F>`
+                : '',
+              member
+                ? `**Roles:** ${Math.max(0, member.roles.cache.size - 1)}`
+                : ''
+            ].filter(Boolean).join('\n')
+          ).setThumbnail(
+            user.displayAvatarURL({
+              dynamic: true
+            })
+          )
+        ]
+      });
+    }
+
+    // AVATAR
+    if (interaction.commandName === 'avatar') {
+
+      const user =
+        interaction.options.getUser('usuario') ||
+        interaction.user;
+
+      const avatar =
+        user.displayAvatarURL({
+          size: 1024,
+          extension: 'png'
+        });
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            `🖼️ Avatar de ${user.username}`,
+            `[Abrir avatar](${avatar})`
+          ).setImage(avatar)
+        ]
+      });
+    }
+
+    // ROLEINFO
+    if (interaction.commandName === 'roleinfo') {
+
+      const role =
+        interaction.options.getRole('rol');
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            `🎭 ${role.name}`,
+            [
+              `**ID:** ${role.id}`,
+              `**Miembros:** ${role.members.size}`,
+              `**Posición:** ${role.position}`,
+              `**Mencionable:** ${role.mentionable ? 'Sí' : 'No'}`
+            ].join('\n')
+          )
+        ]
+      });
+    }
+
+    // CHANNELINFO
+    if (interaction.commandName === 'channelinfo') {
+
+      const channel =
+        interaction.options.getChannel('canal') ||
+        interaction.channel;
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            `📁 ${channel.name}`,
+            [
+              `**ID:** ${channel.id}`,
+              `**Tipo:** ${channel.type}`,
+              `**Creado:** <t:${Math.floor(channel.createdTimestamp / 1000)}:F>`
+            ].join('\n')
+          )
+        ]
+      });
+    }
+
+    // SERVERICON
+    if (interaction.commandName === 'servericon') {
+
+      const icon =
+        interaction.guild.iconURL({
+          size: 1024,
+          extension: 'png'
+        });
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            '🏨 Icono del servidor',
+            icon
+              ? `[Abrir icono](${icon})`
+              : 'El servidor no tiene icono.'
+          ).setImage(icon)
+        ]
+      });
+    }
+
+    // SERVERBANNER
+    if (interaction.commandName === 'serverbanner') {
+
+      const banner =
+        interaction.guild.bannerURL({
+          size: 2048,
+          extension: 'png'
+        });
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            '🖼️ Banner del servidor',
+            banner
+              ? `[Abrir banner](${banner})`
+              : 'El servidor no tiene banner disponible.'
+          ).setImage(banner)
+        ]
+      });
+    }
+
+    // JOINED
+    if (interaction.commandName === 'joined') {
+
+      const user =
+        interaction.options.getUser('usuario') ||
+        interaction.user;
+
+      const member =
+        await interaction.guild.members.fetch(user.id);
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            '📅 Entrada al servidor',
+            `${user} entró el <t:${Math.floor(member.joinedTimestamp / 1000)}:F>`
+          )
+        ]
+      });
+    }
+
+    // ROLES
+    if (interaction.commandName === 'roles') {
+
+      const roles =
+        interaction.guild.roles.cache
+          .filter(role =>
+            role.id !== interaction.guild.id
+          )
+          .sort((a, b) =>
+            b.position - a.position
+          )
+          .map(role => role.toString())
+          .slice(0, 50);
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            '🎭 Roles',
+            roles.length
+              ? roles.join('\n')
+              : 'No hay roles.'
+          )
+        ]
+      });
+    }
+
+    // HELP
+    if (interaction.commandName === 'help') {
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            "♛ KING'S ASSISTANT — AYUDA",
+            [
+              '### 🎉 Diversión',
+              '`/8ball` `/coinflip` `/dice` `/rps`',
+              '`/choose` `/random` `/wyr` `/joke`',
+              '`/compliment` `/fortune`',
+              '',
+              '### ℹ️ Información',
+              '`/help` `/serverinfo` `/userinfo` `/roleinfo`',
+              '`/channelinfo` `/avatar` `/membercount`',
+              '`/boosters` `/staff` `/rules` `/links`',
+              '`/servericon` `/serverbanner` `/joined` `/roles`',
+              '',
+              '### 🛠️ Utilidad',
+              '`/afk` `/ping` `/uptime` `/botinfo`',
+              '`/status` `/stats` `/changelog`',
+              '`/calculate` `/timestamp`'
+            ].join('\n')
+          )
+        ]
+      });
+    }
+
+    // 8BALL
+    if (interaction.commandName === '8ball') {
+
+      const answers = [
+        '✨ Definitivamente.',
+        '🏨 Es muy probable.',
+        '👑 Sí.',
+        '🤔 Puede ser.',
+        '🎭 No estoy seguro.',
+        '❌ Probablemente no.',
+        '🚪 No.',
+        '🛎️ Pregunta nuevamente más tarde.'
+      ];
+
+      const question =
+        interaction.options.getString('pregunta');
+
+      const answer =
+        answers[
+          Math.floor(
+            Math.random() * answers.length
+          )
+        ];
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            '🎱 8Ball',
+            `**Pregunta:** ${question}\n\n**Respuesta:** ${answer}`
+          )
+        ]
+      });
+    }
+
+    // COINFLIP
+    if (interaction.commandName === 'coinflip') {
+
+      const result =
+        Math.random() < 0.5
+          ? 'Cara'
+          : 'Cruz';
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            '🪙 Moneda',
+            `Resultado: **${result}**`
+          )
+        ]
+      });
+    }
+
+    // DICE
+    if (interaction.commandName === 'dice') {
+
+      const result =
+        Math.floor(Math.random() * 6) + 1;
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            '🎲 Dado',
+            `Resultado: **${result}**`
+          )
+        ]
+      });
+    }
+
+    // CHOOSE
+    if (interaction.commandName === 'choose') {
+
+      const options =
+        interaction.options
+          .getString('opciones')
+          .split(',')
+          .map(option => option.trim())
+          .filter(Boolean);
+
+      if (!options.length) {
+        return interaction.reply({
+          content: '❌ No proporcionaste opciones.',
+          ephemeral: true
+        });
+      }
+
+      const selected =
+        options[
+          Math.floor(
+            Math.random() * options.length
+          )
+        ];
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            '🎯 Elección',
+            `👑 Elegí: **${selected}**`
+          )
+        ]
+      });
+    }
+
+    // RANDOM
+    if (interaction.commandName === 'random') {
+
+      const max =
+        interaction.options.getInteger('maximo');
+
+      const result =
+        Math.floor(Math.random() * max) + 1;
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            '🎲 Número aleatorio',
+            `Resultado: **${result}**`
+          )
+        ]
+      });
+    }
+
+    // RPS
+    if (interaction.commandName === 'rps') {
+
+      const userChoice =
+        interaction.options.getString('eleccion');
+
+      const choices = [
+        'piedra',
+        'papel',
+        'tijera'
+      ];
+
+      const botChoice =
+        choices[
+          Math.floor(
+            Math.random() * choices.length
+          )
+        ];
+
+      let result;
+
+      if (userChoice === botChoice) {
+        result = '🤝 Empate.';
+      } else if (
+        (userChoice === 'piedra' &&
+          botChoice === 'tijera') ||
+        (userChoice === 'papel' &&
+          botChoice === 'piedra') ||
+        (userChoice === 'tijera' &&
+          botChoice === 'papel')
+      ) {
+        result = '👑 Ganaste.';
+      } else {
+        result = '🎭 Esta ronda la gano yo.';
+      }
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            '✊ Piedra, Papel o Tijera',
+            [
+              `Tu elección: **${userChoice}**`,
+              `Mi elección: **${botChoice}**`,
+              '',
+              result
+            ].join('\n')
+          )
+        ]
+      });
+    }
+
+    // WYR
+    if (interaction.commandName === 'wyr') {
+
+      const questions = [
+        '¿Qué prefieres: viajar al pasado o al futuro?',
+        '¿Qué prefieres: tener suerte o talento?',
+        '¿Qué prefieres: vivir en la ciudad o en el campo?',
+        '¿Qué prefieres: tener mucho tiempo o mucho dinero?'
+      ];
+
+      const question =
+        questions[
+          Math.floor(
+            Math.random() * questions.length
+          )
+        ];
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            '🤔 ¿Qué prefieres?',
+            question
+          )
+        ]
+      });
+    }
+
+    // JOKE
+    if (interaction.commandName === 'joke') {
+
+      const jokes = [
+        '😂 ¿Qué hace una abeja en el gimnasio? ¡Zum-ba!',
+        '😂 ¿Qué le dijo un techo a otro? Techo de menos.',
+        '😂 ¿Cuál es el colmo de un jardinero? Que lo dejen plantado.'
+      ];
+
+      const joke =
+        jokes[
+          Math.floor(
+            Math.random() * jokes.length
+          )
+        ];
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            '😂 Chiste',
+            joke
+          )
+        ]
+      });
+    }
+
+    // COMPLIMENT
+    if (interaction.commandName === 'compliment') {
+
+      const compliments = [
+        '✨ Tienes una energía increíble.',
+        '👑 Tu presencia mejora la comunidad.',
+        '💎 Eres alguien especial.',
+        '🏨 Siempre eres bienvenido/a aquí.'
+      ];
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            '💎 Cumplido',
+            compliments[
+              Math.floor(
+                Math.random() * compliments.length
+              )
+            ]
+          )
+        ]
+      });
+    }
+
+    // FORTUNE
+    if (interaction.commandName === 'fortune') {
+
+      const fortunes = [
+        '✨ Algo interesante podría ocurrir pronto.',
+        '👑 Un buen momento puede estar cerca.',
+        '🏨 Hoy podría ser un día diferente.',
+        '💎 Mantente atento a nuevas oportunidades.'
+      ];
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            '🔮 Fortuna',
+            fortunes[
+              Math.floor(
+                Math.random() * fortunes.length
+              )
+            ]
+          )
+        ]
+      });
+    }
+
+    // CALCULATE
+    if (interaction.commandName === 'calculate') {
+
+      const operation =
+        interaction.options.getString('operacion');
+
+      if (
+        !/^[0-9+\-*/().%\s]+$/.test(
+          operation
+        )
+      ) {
+        return interaction.reply({
+          content: '❌ Operación no válida.',
+          ephemeral: true
+        });
+      }
+
+      try {
+
+        const result =
+          Function(
+            `"use strict"; return (${operation})`
+          )();
+
+        return interaction.reply({
+          embeds: [
+            createEmbed(
+              '🧮 Calculadora',
+              `\`${operation}\` = **${result}**`
+            )
+          ]
+        });
+
+      } catch {
+
+        return interaction.reply({
+          content:
+            '❌ No pude calcular esa operación.',
+          ephemeral: true
+        });
+      }
+    }
+
+    // TIMESTAMP
+    if (interaction.commandName === 'timestamp') {
+
+      const timestamp =
+        interaction.options.getInteger(
+          'timestamp'
+        );
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            '⏰ Timestamp',
+            [
+              `Unix: \`${timestamp}\``,
+              '',
+              `<t:${timestamp}:F>`,
+              `<t:${timestamp}:R>`
+            ].join('\n')
+          )
+        ]
+      });
+    }
+
+    // STAFF
+    if (interaction.commandName === 'staff') {
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            '🛡️ Staff',
+            `Consulta la guía del Staff en <#${CONFIG.channels.staffGuide}>.`
+          )
+        ]
+      });
+    }
+
+    // RULES
+    if (interaction.commandName === 'rules') {
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            '📜 Reglas',
+            `Consulta las reglas en <#${CONFIG.channels.rules}>.`
+          )
+        ]
+      });
+    }
+
+    // LINKS
+    if (interaction.commandName === 'links') {
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            '🔗 Enlaces importantes',
+            [
+              `📜 Reglas: <#${CONFIG.channels.rules}>`,
+              `🏨 Información: <#${CONFIG.channels.serverInfo}>`,
+              `⚖️ Apelaciones: <#${CONFIG.channels.appeals}>`,
+              '',
+              `⚖️ Servidor de apelaciones: ${CONFIG.appealServer}`
+            ].join('\n')
+          )
+        ]
+      });
+    }
+
+    // CHANGELOG
+    if (interaction.commandName === 'changelog') {
+
+      return interaction.reply({
+        embeds: [
+          createEmbed(
+            '📋 Changelog',
+            [
+              '### v1.0',
+              '✅ Sistema base',
+              '✅ Welcome',
+              '✅ Leave',
+              '✅ AFK',
+              '✅ Invitaciones',
+              '✅ Serverinfo',
+              '✅ Comandos Fun',
+              '✅ Comandos Information',
+              '✅ Comandos Utility'
+            ].join('\n')
+          )
+        ]
+      });
+    }
+
+  } catch (error) {
+
+    console.error(
+      '❌ Error ejecutando comando:',
+      error
+    );
+
+    if (
+      interaction.replied ||
+      interaction.deferred
+    ) {
+      await interaction.followUp({
+        content:
+          '❌ Ocurrió un error ejecutando el comando.',
+        ephemeral: true
+      }).catch(() => {});
+    } else {
+      await interaction.reply({
+        content:
+          '❌ Ocurrió un error ejecutando el comando.',
+        ephemeral: true
+      }).catch(() => {});
+    }
+  }
+});
+
+// ═══════════════════════════════════════════════
+// 🚀 CLIENT READY
 // ═══════════════════════════════════════════════
 
 client.once('clientReady', async () => {
 
   console.log('════════════════════════════════════');
-  console.log('♛ KING\'S ASSISTANT ♛');
+  console.log("♛ KING'S ASSISTANT ♛");
   console.log(`✅ Conectado como ${client.user.tag}`);
-  console.log(`🏨 Servidores: ${client.guilds.cache.size}`);
+  console.log(
+    `🏨 Servidores: ${client.guilds.cache.size}`
+  );
   console.log('════════════════════════════════════');
 
   const guild =
-    client.guilds.cache.get(CONFIG.guildId);
+    client.guilds.cache.get(
+      CONFIG.guildId
+    );
 
   if (!guild) {
 
@@ -1491,7 +1599,7 @@ client.once('clientReady', async () => {
 
   await logAction(
     '🚀 Bot iniciado',
-    `**King's Assistant** se ha conectado correctamente.\n\nServidor: **${guild.name}**`
+    `**King's Assistant** se conectó correctamente.\n\nServidor: **${guild.name}**`
   );
 
   await registerCommands();
@@ -1502,46 +1610,55 @@ client.once('clientReady', async () => {
 // ═══════════════════════════════════════════════
 
 client.on('error', error => {
-  console.error('❌ Error del cliente:', error);
+  console.error(
+    '❌ Error del cliente:',
+    error
+  );
 });
 
 process.on('unhandledRejection', error => {
-  console.error('❌ Unhandled Rejection:', error);
+  console.error(
+    '❌ Unhandled Rejection:',
+    error
+  );
 });
 
 process.on('uncaughtException', error => {
-  console.error('❌ Uncaught Exception:', error);
+  console.error(
+    '❌ Uncaught Exception:',
+    error
+  );
 });
 
 // ═══════════════════════════════════════════════
-// 🔐 LOGIN
+// 🔐 VARIABLES
 // ═══════════════════════════════════════════════
 
 if (!process.env.DISCORD_TOKEN) {
-
   console.error(
-    '❌ Falta DISCORD_TOKEN en las variables de entorno.'
+    '❌ Falta DISCORD_TOKEN.'
   );
-
   process.exit(1);
 }
 
 if (!process.env.CLIENT_ID) {
-
   console.error(
-    '❌ Falta CLIENT_ID en las variables de entorno.'
+    '❌ Falta CLIENT_ID.'
   );
-
   process.exit(1);
 }
 
 if (!process.env.GUILD_ID) {
-
   console.error(
-    '❌ Falta GUILD_ID en las variables de entorno.'
+    '❌ Falta GUILD_ID.'
   );
-
   process.exit(1);
 }
 
-client.login(process.env.DISCORD_TOKEN);
+// ═══════════════════════════════════════════════
+// 🔑 LOGIN
+// ═══════════════════════════════════════════════
+
+client.login(
+  process.env.DISCORD_TOKEN
+);
